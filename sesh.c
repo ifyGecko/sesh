@@ -49,7 +49,7 @@ int main(int argc, char** argv){
     if(hist_cnt < MAX_HIS && strstr(str, "history") != str){
       history[hist_cnt] = (char*)malloc(strlen(str) + 1);
       strcpy(history[hist_cnt++], str);
-    }else if(hist_cnt == MAX_HIS){
+    }else if(hist_cnt == MAX_HIS && strstr(str, "history") != str){
       write(1, "error: cmd history out of space, run 'history clean'\n", 53);
     }
     
