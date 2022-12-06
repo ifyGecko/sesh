@@ -103,7 +103,10 @@ int main(int argc, char** argv){
         }
       }else{
         // print history buffer
+        char tmp[4] = { 0 };
         for(int i = 0; i < hist_cnt; ++i){
+          sprintf(tmp, "%d: ", i);
+          write(1, tmp, 4);
           write(1, history[i], strlen(history[i]));
           write(1, "\n", 1);
         }
