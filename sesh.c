@@ -10,13 +10,16 @@
 
 #define MAX_STR 256
 #define MAX_TOK 16
+#define MAX_HIS 10
 
 char* tokenize(char*);
 
 int main(int argc, char** argv){
 
   char str[MAX_STR] = {0};
-
+  char* history[MAX_HIS];
+  int hist_cnt = 0;
+  
   while(1){
     // terminal prompt
   loop:
@@ -42,6 +45,15 @@ int main(int argc, char** argv){
       }
     }
 
+    // copy cmd to history buffer
+    if(hist_cnt < MAX_HIS){
+      history[hist_cnt] = (char*)malloc(strlen(str) + 1);
+      strcpy(history[hist_cnt++], str);
+    }else{
+      write(1, "error: cmd history out of space, run 'history clean'\n", 53);
+    }
+    
+  parse:
     // tokenize input
     i = 0;
     int pipe_count = 0;
@@ -73,6 +85,29 @@ int main(int argc, char** argv){
     // execute tokenized command(s)
     if(strcmp(cmd_list[0][0], "cd") == 0){
       chdir(cmd_list[0][1]);
+    }else if(strcmp(cmd_list[0][0], "history") == 0){
+      if(i == 2 && strcmp(cmd_list[0][1], "clean") == 0){
+        // clean history buffer
+        for(int i = 0; i < hist_cnt; ++i){
+          free(history[i]);
+        }
+        hist_cnt = 0;
+      }else if(i == 3 && strcmp(cmd_list[0][1], "exec") == 0){
+        // execute old cmd
+        int cmd_index = atoi(cmd_list[0][2]);
+        if(cmd_index < MAX_HIS && cmd_index <= hist_cnt){
+          strcpy(str, history[cmd_index]);
+          goto parse;
+        }else{
+          write(1, "error: invalid cmd history execution\n", 37);
+        }
+      }else{
+        // print history buffer
+        for(int i = 0; i < hist_cnt; ++i){
+          write(1, history[i], strlen(history[i]));
+          write(1, "\n", 1);
+        }
+      }
     }else if(strcmp(cmd_list[0][0], "exit") == 0){
       exit(0); // system will clean up malloc'd mem
     }else{
@@ -86,45 +121,45 @@ int main(int argc, char** argv){
           // logic for connecting pipes
           if(pipe_count != 0){
             if(i == pipe_count){
-	      dup2(pipe_fd[0], 0);
+              dup2(pipe_fd[0], 0);
             }else if(i == 0){
-	      dup2(prior_fd, 1);
-	      close(pipe_fd[0]);
+              dup2(prior_fd, 1);
+              close(pipe_fd[0]);
             }else{
-	      dup2(pipe_fd[0], 0);
-	      dup2(prior_fd, 1);
+              dup2(pipe_fd[0], 0);
+              dup2(prior_fd, 1);
             }
-	    close(pipe_fd[1]);
+            close(pipe_fd[1]);
           }
 
           // file redirection logic
           if(redirect_flag == 1 && i == pipe_count){
             int fd = open(redirect_file, O_WRONLY|O_CREAT|O_TRUNC, 0644);
-	    dup2(fd, 1);
-	    close(fd);
+            dup2(fd, 1);
+            close(fd);
           }
 
           // execute next command
-	  execvp(cmd_list[i][0], cmd_list[i]);
+          execvp(cmd_list[i][0], cmd_list[i]);
           // exec calls do not return upon success, print error otherwise
-	  dup2(orig_stdout, 1); // reset stdout to original fd
-	  write(1, "error: ", 7);
-	  write(1, cmd_list[i][0], strlen(cmd_list[i][0]));
-	  write(1, ": command not found\n", 20);
-	  exit(0);
+          dup2(orig_stdout, 1); // reset stdout to original fd
+          write(1, "error: ", 7);
+          write(1, cmd_list[i][0], strlen(cmd_list[i][0]));
+          write(1, ": command not found\n", 20);
+          exit(0);
         }
 
         // manage pipes
         if(i != pipe_count){
-	  close(prior_fd);
+          close(prior_fd);
         }
         prior_fd = pipe_fd[1];
-	close(pipe_fd[0]);
+        close(pipe_fd[0]);
       }
 
       // wait on all children
       for(int i = 0; i <= pipe_count; ++i){
-	wait(NULL);
+        wait(NULL);
       }
     }
 
