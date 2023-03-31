@@ -1,4 +1,4 @@
 # sesh
-Simple Elementary Shell
+Simple Elementary SHell
 
-Nothing fancy, just a minimal shell capable of multiple pipes and redirection.
+Nothing fancy, just a minimal shell capable of command history, pipes and redirection.
