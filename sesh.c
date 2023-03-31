@@ -45,12 +45,16 @@ int main(int argc, char** argv){
       }
     }
 
-    // copy cmd to history buffer
-    if(hist_cnt < MAX_HIS && strstr(str, "history") != str){
+    // dont save history cmds to history buff
+    if(!strstr(str, "history")){
+      // shift cmd history when at max
+      if(hist_cnt >= MAX_HIS){
+        memcpy(&history[0], &history[1], sizeof(char*) * (--hist_cnt));
+        history[9] = NULL;
+      }
+      // cpy cmd to history buff
       history[hist_cnt] = (char*)malloc(strlen(str) + 1);
       strcpy(history[hist_cnt++], str);
-    }else if(hist_cnt == MAX_HIS && strstr(str, "history") != str){
-      write(1, "error: cmd history out of space, run 'history clean'\n", 53);
     }
     
   parse:
@@ -102,11 +106,11 @@ int main(int argc, char** argv){
           write(1, "error: invalid cmd history execution\n", 37);
         }
       }else{
+        char* indices = "0123456789";
         // print history buffer
-        char tmp[4] = { 0 };
         for(int i = 0; i < hist_cnt; ++i){
-          sprintf(tmp, "%d: ", i);
-          write(1, tmp, 4);
+          write(1, &indices[i], 1);
+          write(1, ". ", 2);
           write(1, history[i], strlen(history[i]));
           write(1, "\n", 1);
         }
