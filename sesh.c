@@ -24,7 +24,7 @@ int main(int argc, char** argv){
     // terminal prompt
   loop:
     memset(str, 0, sizeof(str)); // zero init prompt str
-    strcpy(str, getlogin());
+    strcpy(str, getlogin()); // NOTE: possible returned NULL ptr
     str[strlen(str)] = '@';
     gethostname(&str[strlen(str)], 16);
     str[strlen(str)] = ':';
