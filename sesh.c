@@ -23,7 +23,7 @@ int main(int argc, char** argv){
   while(1){
     // terminal prompt
   loop:
-    memset(str, 0, sizeof(str)); // zero init prompt str
+    memset(str, 0, sizeof(str)); // zero init cwd str
     gethostname(str, 16);
     str[strlen(str)] = ':';
     getcwd(&str[strlen(str)+1], MAX_STR);
@@ -51,6 +51,7 @@ int main(int argc, char** argv){
     if(!strstr(str, "history")){
       // shift cmd history when at max
       if(hist_cnt >= MAX_HIS){
+        free(history[0]);
         memcpy(&history[0], &history[1], sizeof(char*) * (--hist_cnt));
         history[9] = NULL;
       }
@@ -118,7 +119,18 @@ int main(int argc, char** argv){
         }
       }
     }else if(strcmp(cmd_list[0][0], "exit") == 0){
-      exit(0); // system will clean up malloc'd mem
+
+      // manage heap memory & exit
+      for(int i = 0; i <= pipe_count; ++i){
+        free(cmd_list[i]);
+      }
+      free(cmd_list);
+      free(redirect_file);
+      for(int i = 0; i < hist_cnt; ++i){
+        free(history[i]);
+      }
+      exit(0);
+      
     }else{
       int prior_fd;
       int pipe_fd[2];
