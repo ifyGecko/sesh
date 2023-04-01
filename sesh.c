@@ -24,7 +24,9 @@ int main(int argc, char** argv){
     // terminal prompt
   loop:
     memset(str, 0, sizeof(str)); // zero init prompt str
-    gethostname(str, 16);
+    strcpy(str, getlogin());
+    str[strlen(str)] = '@';
+    gethostname(&str[strlen(str)], 16);
     str[strlen(str)] = ':';
     getcwd(&str[strlen(str)], MAX_STR);
     write(1, str, sizeof(str));
