@@ -68,10 +68,12 @@ int main(int argc, char** argv){
     int pipe_count = 0;
     int stdin_redir = 0;
     int stdout_redir = 0;
+    int stderr_redir = 0;
     char*** cmd_list = (char***)calloc(MAX_TOK * sizeof(char**), sizeof(char**));
     cmd_list[pipe_count] = (char**)calloc(MAX_TOK * sizeof(char*), sizeof(char*));
-    char* stdin_redir_file = (char*)calloc(MAX_TOK * sizeof(char), sizeof(char));
-    char* stdout_redir_file = (char*)calloc(MAX_TOK * sizeof(char), sizeof(char));
+    char* stdin_redir_file = (char*)calloc(MAX_STR * sizeof(char), sizeof(char));
+    char* stdout_redir_file = (char*)calloc(MAX_STR * sizeof(char), sizeof(char));
+    char* stderr_redir_file = (char*)calloc(MAX_STR * sizeof(char), sizeof(char));
     char* token = tokenize(str);
     while(token != NULL){
       if(strcmp(token, "|") == 0){
@@ -89,12 +91,18 @@ int main(int argc, char** argv){
         i = 0;
         token = tokenize(NULL);
         continue;
+      }else if(strcmp(token, "2>") == 0){
+        stderr_redir = 1;
+        i = 0;
+        token = tokenize(NULL);
       }
 
       if(stdout_redir == 1 && !*stdout_redir_file){
         strcpy(stdout_redir_file, token);
       }else if(stdin_redir == 1 && !*stdin_redir_file){
         strcpy(stdin_redir_file, token);
+      }else if(stderr_redir == 1 && !*stderr_redir_file){
+        strcpy(stderr_redir_file, token);
       }else{
         cmd_list[pipe_count][i++] = token;
       }
@@ -187,6 +195,19 @@ int main(int argc, char** argv){
             close(fd);
           }
 
+          if(stderr_redir == 1 && i == pipe_count){
+            int fd = open(stderr_redir_file, O_WRONLY|O_CREAT|O_TRUNC, 0644);
+            if(fd == -1){
+              write(1, "error: ", 7);
+              write(1, "failed to open ", 15);
+              write(1, stderr_redir_file, strlen(stderr_redir_file));
+              write(1, "\n", 1);
+              exit(0);
+            }
+            dup2(fd, 2);
+            close(fd);
+          }
+
           if(stdin_redir == 1 && i == 0){
             int fd = open(stdin_redir_file, O_RDONLY, 0644);
             if(fd == -1){
@@ -231,6 +252,7 @@ int main(int argc, char** argv){
     }
     free(cmd_list);
     free(stdout_redir_file);
+    free(stderr_redir_file);
     free(stdin_redir_file);
   }
 }
