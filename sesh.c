@@ -19,7 +19,7 @@ int main(int argc, char** argv){
   char str[MAX_STR] = {0};
   char* history[MAX_HIS];
   int hist_cnt = 0;
-  
+ 
   while(1){
     // terminal prompt
   loop:
@@ -58,39 +58,55 @@ int main(int argc, char** argv){
         history[9] = NULL;
       }
       // cpy cmd to history buff
-      history[hist_cnt] = (char*)malloc(strlen(str) + 1);
+      history[hist_cnt] = (char*)calloc(strlen(str) + 1, sizeof(char));
       strcpy(history[hist_cnt++], str);
     }
-    
+   
   parse:
     // tokenize input
     i = 0;
     int pipe_count = 0;
-    int redirect_flag = 0;
-    char*** cmd_list = (char***)malloc(MAX_TOK * sizeof(char**));
-    cmd_list[pipe_count] = (char**)malloc(MAX_TOK * sizeof(char*));
-    char* redirect_file = (char*)malloc(MAX_TOK * sizeof(char));
+    int stdin_redir = 0;
+    int stdout_redir = 0;
+    char*** cmd_list = (char***)calloc(MAX_TOK * sizeof(char**), sizeof(char**));
+    cmd_list[pipe_count] = (char**)calloc(MAX_TOK * sizeof(char*), sizeof(char*));
+    char* stdin_redir_file = (char*)calloc(MAX_TOK * sizeof(char), sizeof(char));
+    char* stdout_redir_file = (char*)calloc(MAX_TOK * sizeof(char), sizeof(char));
     char* token = tokenize(str);
     while(token != NULL){
       if(strcmp(token, "|") == 0){
-        cmd_list[++pipe_count] = (char**)malloc(MAX_TOK * sizeof(char*));
+        cmd_list[++pipe_count] = (char**)calloc(MAX_TOK * sizeof(char*), sizeof(char*));
         i = 0;
         token = tokenize(NULL);
         continue;
       }else if(strcmp(token, ">") == 0){
-        redirect_flag = 1;
+        stdout_redir = 1;
+        i = 0;
+        token = tokenize(NULL);
+        continue;
+      }else if(strcmp(token, "<") == 0){
+        stdin_redir = 1;
         i = 0;
         token = tokenize(NULL);
         continue;
       }
-      if(redirect_flag == 0){
-        cmd_list[pipe_count][i++] = token;
+
+      if(stdout_redir == 1 && !*stdout_redir_file){
+        strcpy(stdout_redir_file, token);
+      }else if(stdin_redir == 1 && !*stdin_redir_file){
+        strcpy(stdin_redir_file, token);
       }else{
-        strcpy(redirect_file, token);
+        cmd_list[pipe_count][i++] = token;
       }
+     
       token = tokenize(NULL);
     }
 
+    // bypass execution w/ empty cmd list
+    if(!*cmd_list[0][0]){
+      goto cleanup;
+    }
+   
     // execute tokenized command(s)
     if(strcmp(cmd_list[0][0], "cd") == 0){
       chdir(cmd_list[0][1]);
@@ -111,10 +127,11 @@ int main(int argc, char** argv){
           write(1, "error: invalid cmd history execution\n", 37);
         }
       }else{
-        char* indices = "0123456789";
+        char index[16] = { 0 };
         // print history buffer
         for(int i = 0; i < hist_cnt; ++i){
-          write(1, &indices[i], 1);
+          sprintf(index, "%d", i);
+          write(1, index, strlen(index));
           write(1, ". ", 2);
           write(1, history[i], strlen(history[i]));
           write(1, "\n", 1);
@@ -127,17 +144,18 @@ int main(int argc, char** argv){
         free(cmd_list[i]);
       }
       free(cmd_list);
-      free(redirect_file);
+      free(stdout_redir_file);
+      free(stdin_redir_file);
       for(int i = 0; i < hist_cnt; ++i){
         free(history[i]);
       }
       exit(0);
-      
+     
     }else{
       int prior_fd;
       int pipe_fd[2];
       int orig_stdout = dup(1); // save stdout for printing errors
-      for(int i = pipe_count; i >= 0; --i){
+      for(int i = pipe_count; i >= 0; --i){ // connect pipes in reverse order
         pipe(pipe_fd); // creates pipes
         if(fork() == 0){
 
@@ -156,9 +174,29 @@ int main(int argc, char** argv){
           }
 
           // file redirection logic
-          if(redirect_flag == 1 && i == pipe_count){
-            int fd = open(redirect_file, O_WRONLY|O_CREAT|O_TRUNC, 0644);
+          if(stdout_redir == 1 && i == pipe_count){
+            int fd = open(stdout_redir_file, O_WRONLY|O_CREAT|O_TRUNC, 0644);
+            if(fd == -1){
+              write(1, "error: ", 7);
+              write(1, "failed to open ", 15);
+              write(1, stdout_redir_file, strlen(stdout_redir_file));
+              write(1, "\n", 1);
+              exit(0);
+            }
             dup2(fd, 1);
+            close(fd);
+          }
+
+          if(stdin_redir == 1 && i == 0){
+            int fd = open(stdin_redir_file, O_RDONLY, 0644);
+            if(fd == -1){
+              write(1, "error: ", 7);
+              write(1, "failed to open ", 15);
+              write(1, stdin_redir_file, strlen(stdin_redir_file));
+              write(1, "\n", 1);
+              exit(0);
+            }
+            dup2(fd, 0);
             close(fd);
           }
 
@@ -186,19 +224,21 @@ int main(int argc, char** argv){
       }
     }
 
+  cleanup:
     // manage heap memory
     for(int i = 0; i <= pipe_count; ++i){
       free(cmd_list[i]);
     }
     free(cmd_list);
-    free(redirect_file);
+    free(stdout_redir_file);
+    free(stdin_redir_file);
   }
 }
 
 char* tokenize(char* str){
   char* token;
   static char* s;
-  
+ 
   if(str == NULL && s == NULL){
     return NULL;
   }else if(str != NULL){
@@ -208,7 +248,7 @@ char* tokenize(char* str){
   while(*s == ' '){
     ++s;
   }
-  
+ 
   token = s;
 
   while(1){
