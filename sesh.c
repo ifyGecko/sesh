@@ -18,7 +18,7 @@ int main(int argc, char** argv){
 
   char str[MAX_STR] = {0};
   char* history[MAX_HIS];
-  int hist_cnt = 0;
+  unsigned int hist_cnt = 0;
  
   while(1){
     // terminal prompt
@@ -127,7 +127,7 @@ int main(int argc, char** argv){
         hist_cnt = 0;
       }else if(i == 3 && strcmp(cmd_list[0][1], "exec") == 0){
         // execute old cmd
-        int cmd_index = atoi(cmd_list[0][2]);
+        unsigned int cmd_index = atoi(cmd_list[0][2]);
         if(cmd_index < MAX_HIS && cmd_index <= hist_cnt){
           strcpy(str, history[cmd_index]);
           goto parse;
