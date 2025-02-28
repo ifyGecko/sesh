@@ -125,7 +125,7 @@ int main(int argc, char** argv) {
     }
 
     // bypass execution w/ empty cmd list
-    if(!*cmd_list[0][0]) {
+    if(!*cmd_list[0] || !*cmd_list[0][0]) {
       goto cleanup;
     }
    
