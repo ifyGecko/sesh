@@ -44,9 +44,10 @@ int main(int argc, char **argv) {
     // init prompt string
     memset(str, 0, sizeof(str));
     if (user_name == NULL) {
-      strcpy(str, "unknown");
+      strncpy(str, "unknown", MAX_STR);
     } else {
-      strcpy(str, user_name);
+      strncpy(str, user_name, MAX_STR);
+      str[MAX_STR] = '\0';
     }
     str[strlen(str)] = '@';
     gethostname(&str[strlen(str)], 16);
