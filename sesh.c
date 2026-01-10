@@ -93,7 +93,7 @@ int main(int argc, char **argv) {
       if (hist_cnt >= MAX_HIS) {
         free(history[0]);
         memcpy(&history[0], &history[1], sizeof(char *) * (--hist_cnt));
-        history[9] = NULL;
+        history[MAX_HIS - 1] = NULL;
       }
       // cpy cmd to history buff
       history[hist_cnt] = (char *)calloc(strlen(str) + 1, sizeof(char));
@@ -356,3 +356,4 @@ char *tokenize(char *str) {
   }
   return *token == 0x00 ? NULL : token;
 }
+
