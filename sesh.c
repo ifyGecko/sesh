@@ -329,31 +329,56 @@ int main(int argc, char **argv) {
 }
 
 char *tokenize(char *str) {
+  static char *s = NULL;
   char *token;
-  static char *s;
 
-  if (str == NULL && s == NULL) {
-    return NULL;
-  } else if (str != NULL) {
+  if (str != NULL) {
     s = str;
   }
 
-  while (*s == ' ') {
-    ++s;
+  if (s == NULL) {
+    return NULL;
   }
 
-  token = s;
+  // skip leading spaces
+  while (*s == ' ') {
+    s++;
+  }
 
-  while (1) {
-    char c = *(s++);
-    if (c == ' ') {
-      *(s - 1) = 0x00;
-      break;
-    } else if (c == 0x00) {
-      s = NULL;
-      break;
+  if (*s == '\0') {
+    s = NULL;
+    return NULL;
+  }
+
+  // quoted string
+  if (*s == '"') {
+    // skip opening quote
+    s++;
+    token = s;
+
+    while (*s && *s != '"') {
+      s++;
+    }
+
+    if (*s == '"') {
+      // terminate token
+      *s = '\0';
+      // skip closing quote
+      s++;
+    }
+  } else {
+    // normal token
+    token = s;
+
+    while (*s && *s != ' ') {
+      s++;
+    }
+
+    if (*s) {
+      *s = '\0';
+      s++;
     }
   }
-  return *token == 0x00 ? NULL : token;
-}
 
+  return token;
+}
