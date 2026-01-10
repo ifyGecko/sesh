@@ -234,7 +234,11 @@ int main(int argc, char **argv) {
       for (int i = pipe_count; i >= 0; --i) {
         // creates pipes
         pipe(pipe_fd);
+        // ignore ctl-c in shell
+        signal(SIGINT, SIG_IGN);
         if (fork() == 0) {
+          // allow ctl-c of cmds
+          signal(SIGINT, SIG_DFL);
           // logic for connecting pipes
           if (pipe_count != 0) {
             if (i == pipe_count) {
