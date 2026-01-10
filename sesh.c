@@ -87,8 +87,8 @@ int main(int argc, char **argv) {
       }
     }
 
-    // dont save history cmds to history buff
-    if (!strstr(str, "history")) {
+    // dont save history/help cmds to history buff
+    if (!strstr(str, "history") && !strstr(str, "help") && !strstr(str, "?")) {
       // shift cmd history when at max
       if (hist_cnt >= MAX_HIS) {
         free(history[0]);
@@ -174,7 +174,13 @@ int main(int argc, char **argv) {
     }
 
     // execute tokenized command(s)
-    if (strcmp(cmd_list[0][0], "cd") == 0) {
+    if (strcmp(cmd_list[0][0], "help") == 0 || strcmp(cmd_list[0][0], "?") == 0) {
+      write(1, "0. cd <path> - change directory\n", 33);
+      write(1, "1. history - list input command history\n", 41);
+      write(1, "2. history clean - remove all commands from history\n", 53);
+      write(1, "3. history exec <n> - execute the nth command from this list\n", 62);
+      write(1, "4. exit - terminate sesh instance\n", 35);
+    } else if (strcmp(cmd_list[0][0], "cd") == 0) {
       chdir(cmd_list[0][1]);
     } else if (strcmp(cmd_list[0][0], "history") == 0) {
       if (i == 2 && strcmp(cmd_list[0][1], "clean") == 0) {
