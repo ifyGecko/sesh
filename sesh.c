@@ -47,7 +47,6 @@ int main(int argc, char **argv) {
       strncpy(str, "unknown", MAX_STR);
     } else {
       strncpy(str, user_name, MAX_STR);
-      str[MAX_STR] = '\0';
     }
     str[strlen(str)] = '@';
     gethostname(&str[strlen(str)], 16);
@@ -388,3 +387,4 @@ char *tokenize(char *str) {
 
   return token;
 }
+
