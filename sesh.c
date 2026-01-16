@@ -9,9 +9,7 @@
 #include <unistd.h>
 
 #define MAX_STR 256
-
 #define MAX_TOK 16
-
 #define MAX_HIS 10
 
 char *tokenize(char *);
@@ -463,3 +461,4 @@ char *tokenize(char *str) {
 
   return token;
 }
+
