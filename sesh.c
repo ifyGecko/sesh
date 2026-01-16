@@ -9,7 +9,9 @@
 #include <unistd.h>
 
 #define MAX_STR 256
+
 #define MAX_TOK 16
+
 #define MAX_HIS 10
 
 char *tokenize(char *);
@@ -19,7 +21,6 @@ int main(int argc, char **argv) {
   char str[MAX_STR] = {0};
   char *history[MAX_HIS];
   unsigned int hist_cnt = 0;
-
   char *user_name = getlogin();
 
   if (argc != 1 && argc != 2) {
@@ -41,6 +42,7 @@ int main(int argc, char **argv) {
   while (1) {
     // terminal prompt
   loop:
+
     // init prompt string
     memset(str, 0, sizeof(str));
     if (user_name == NULL) {
@@ -52,6 +54,7 @@ int main(int argc, char **argv) {
     gethostname(&str[strlen(str)], 16);
     str[strlen(str)] = ':';
     getcwd(&str[strlen(str)], MAX_STR);
+
     // if not processing commands from a file
     // write terminal prompt line
     if (fd == 1) {
@@ -62,6 +65,7 @@ int main(int argc, char **argv) {
     // read input
     int i = 0;
     memset(str, 0, sizeof(str));  // zero init cmd str
+
     while (1) {
       int bytes_read = read(fd, &str[i++], 1);
       if (bytes_read == 0 || bytes_read == -1) {
@@ -73,12 +77,14 @@ int main(int argc, char **argv) {
           exit(-1);
         }
       }
+
       if (i == MAX_STR && str[i - 1] != '\n') {  // detect overflow
         write(1, "error: command length exceeds buffer size\n", 42);
         while (getchar() != '\n') {
         }  // flush stdin
         goto loop;
       }
+
       if (str[i - 1] == '\n') {
         if (i == 1) goto loop;  // if only 'enter', restart loop
         str[i - 1] = '\0';      // replace newline with null char
@@ -94,6 +100,7 @@ int main(int argc, char **argv) {
         memcpy(&history[0], &history[1], sizeof(char *) * (--hist_cnt));
         history[MAX_HIS - 1] = NULL;
       }
+
       // cpy cmd to history buff
       history[hist_cnt] = (char *)calloc(strlen(str) + 1, sizeof(char));
       strcpy(history[hist_cnt++], str);
@@ -105,6 +112,7 @@ int main(int argc, char **argv) {
   parse:
     // tokenize input
     i = 0;
+    int exit_code = 0;
     int pipe_count = 0;
     int stdin_redir = 0;
     int stdout_redir = 0;
@@ -119,8 +127,8 @@ int main(int argc, char **argv) {
         (char *)calloc(MAX_STR * sizeof(char), sizeof(char));
     char *stderr_redir_file =
         (char *)calloc(MAX_STR * sizeof(char), sizeof(char));
-
     char *token = NULL;
+
     if (multi_command == 0) {
       token = tokenize(str);
     } else {
@@ -138,6 +146,7 @@ int main(int argc, char **argv) {
         i = 0;
         token = tokenize(NULL);
         continue;
+
       } else if (strcmp(token, ">") == 0) {
         stdout_redir = 1;
         i = 0;
@@ -173,24 +182,36 @@ int main(int argc, char **argv) {
     }
 
     // execute tokenized command(s)
-    if (strcmp(cmd_list[0][0], "help") == 0 || strcmp(cmd_list[0][0], "?") == 0) {
+    if (strcmp(cmd_list[0][0], "help") == 0 ||
+        strcmp(cmd_list[0][0], "?") == 0) {
       write(1, "0. cd <path> - change directory\n", 33);
-      write(1, "1. history - list input command history\n", 41);
-      write(1, "2. history clean - remove all commands from history\n", 53);
-      write(1, "3. history exec <n> - execute the nth command from this list\n", 62);
-      write(1, "4. exit - terminate sesh instance\n", 35);
+      write(1, "1. setenv <VAR> <VAL> - set environment variable\n", 49);
+      write(1, "1. unsetenv <VAR> - unset environment variable\n", 47);
+      write(1, "3. history - list input command history\n", 41);
+      write(1, "4. history clean - remove all commands from history\n", 53);
+      write(1, "5. history exec <n> - execute the nth command from this list\n",
+            62);
+      write(1, "6. exit - terminate sesh instance\n", 35);
+      write(1, "7. $? - get exit code of last cmd ran\n", 39);
     } else if (strcmp(cmd_list[0][0], "cd") == 0) {
       chdir(cmd_list[0][1]);
+    } else if (strcmp(cmd_list[0][0], "setenv") == 0) {
+      setenv(cmd_list[0][1], cmd_list[0][2], 1);
+    } else if (strcmp(cmd_list[0][0], "unsetenv") == 0) {
+      unsetenv(cmd_list[0][1]);
     } else if (strcmp(cmd_list[0][0], "history") == 0) {
       if (i == 2 && strcmp(cmd_list[0][1], "clean") == 0) {
         // clean history buffer
         for (int i = 0; i < hist_cnt; ++i) {
           free(history[i]);
         }
+
         hist_cnt = 0;
+
       } else if (i == 3 && strcmp(cmd_list[0][1], "exec") == 0) {
         // execute old cmd
         unsigned int cmd_index = atoi(cmd_list[0][2]);
+
         if (cmd_index < MAX_HIS && cmd_index <= hist_cnt) {
           strcpy(str, history[cmd_index]);
           goto parse;
@@ -208,6 +229,7 @@ int main(int argc, char **argv) {
           write(1, "\n", 1);
         }
       }
+
     } else if (strcmp(cmd_list[0][0], "exit") == 0) {
       // manage heap memory & exit
       for (int i = 0; i <= pipe_count; ++i) {
@@ -216,27 +238,37 @@ int main(int argc, char **argv) {
       free(cmd_list);
       free(stdout_redir_file);
       free(stdin_redir_file);
+
       for (int i = 0; i < hist_cnt; ++i) {
         free(history[i]);
       }
+
       exit(0);
 
     } else if (fd != 1 && cmd_list[0][0][0] == '#' &&
                cmd_list[0][0][1] == '!') {
       // if processing script file, skip shebang line
       goto cleanup;
-
+    } else if (strcmp(cmd_list[0][0], "$?") == 0) {
+      char ret_str[MAX_STR];
+      int len = sprintf(ret_str, "%d\n", exit_code);
+      write(1, ret_str, len);
     } else {
       int prior_fd;
       int pipe_fd[2];
       int orig_stdout = dup(1);  // save stdout for printing errors
+      pid_t *pids = calloc(pipe_count + 1, sizeof(pid_t));
+
       // connect pipes in reverse order
       for (int i = pipe_count; i >= 0; --i) {
         // creates pipes
         pipe(pipe_fd);
+
         // ignore ctl-c in shell
         signal(SIGINT, SIG_IGN);
-        if (fork() == 0) {
+
+        pid_t cur_pid = fork();
+        if (cur_pid == 0) {
           // allow ctl-c of cmds
           signal(SIGINT, SIG_DFL);
           // logic for connecting pipes
@@ -257,6 +289,7 @@ int main(int argc, char **argv) {
           if (stdout_redir == 1 && i == pipe_count) {
             int fd =
                 open(stdout_redir_file, O_WRONLY | O_CREAT | O_TRUNC, 0644);
+
             if (fd == -1) {
               write(1, "error: ", 7);
               write(1, "failed to open ", 15);
@@ -264,6 +297,7 @@ int main(int argc, char **argv) {
               write(1, "\n", 1);
               exit(-1);
             }
+
             dup2(fd, 1);
             close(fd);
           }
@@ -278,6 +312,7 @@ int main(int argc, char **argv) {
               write(1, "\n", 1);
               exit(-1);
             }
+
             dup2(fd, 2);
             close(fd);
           }
@@ -291,12 +326,14 @@ int main(int argc, char **argv) {
               write(1, "\n", 1);
               exit(-1);
             }
+
             dup2(fd, 0);
             close(fd);
           }
 
           // execute next command
           execvp(cmd_list[i][0], cmd_list[i]);
+
           // exec calls do not return upon success, print error otherwise
           dup2(orig_stdout, 1);  // reset stdout to original fd
           write(1, "error: ", 7);
@@ -305,17 +342,28 @@ int main(int argc, char **argv) {
           exit(-1);
         }
 
+        pids[i] = cur_pid;
+
         // manage pipes
         if (i != pipe_count) {
           close(prior_fd);
         }
+
         prior_fd = pipe_fd[1];
         close(pipe_fd[0]);
       }
 
-      // wait on all children
-      for (int i = 0; i <= pipe_count; ++i) {
-        wait(NULL);
+      // get exit code
+      int status = 0;
+      waitpid(pids[pipe_count], &status, 0);
+
+      if (WIFEXITED(status)) {
+        exit_code = WEXITSTATUS(status);
+      }
+
+      // ensure to wait on other pids
+      for (int i = 0; i < pipe_count; ++i) {
+        waitpid(pids[i], NULL, 0);
       }
     }
 
@@ -324,6 +372,7 @@ int main(int argc, char **argv) {
     for (int i = 0; i <= pipe_count; ++i) {
       free(cmd_list[i]);
     }
+
     free(cmd_list);
     free(stdout_redir_file);
     free(stderr_redir_file);
@@ -339,6 +388,7 @@ int main(int argc, char **argv) {
 
 char *tokenize(char *str) {
   static char *s = NULL;
+
   char *token;
 
   if (str != NULL) {
@@ -372,9 +422,31 @@ char *tokenize(char *str) {
     if (*s == '"') {
       // terminate token
       *s = '\0';
+
       // skip closing quote
       s++;
     }
+
+  } else if (*s == '$' && *(s + 1) != '?') {
+    // env var expansion
+    // skip $
+    s++;
+
+    // pointer ref to substring
+    char *sub = s;
+
+    // iterate over remainder
+    while (*s && *s != ' ') {
+      s++;
+    }
+
+    // null terminate
+    if (*s == ' ') {
+      *s = '\0';
+    }
+
+    token = getenv(sub);
+
   } else {
     // normal token
     token = s;
@@ -391,4 +463,3 @@ char *tokenize(char *str) {
 
   return token;
 }
-
