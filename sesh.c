@@ -116,15 +116,15 @@ int main(int argc, char **argv) {
     int stdout_redir = 0;
     int stderr_redir = 0;
     char ***cmd_list =
-        (char ***)calloc(MAX_TOK * sizeof(char **), sizeof(char **));
+        (char ***)calloc(MAX_TOK, sizeof(char **));
     cmd_list[pipe_count] =
-        (char **)calloc(MAX_TOK * sizeof(char *), sizeof(char *));
+        (char **)calloc(MAX_TOK, sizeof(char *));
     char *stdin_redir_file =
-        (char *)calloc(MAX_STR * sizeof(char), sizeof(char));
+        (char *)calloc(MAX_STR, sizeof(char));
     char *stdout_redir_file =
-        (char *)calloc(MAX_STR * sizeof(char), sizeof(char));
+        (char *)calloc(MAX_STR, sizeof(char));
     char *stderr_redir_file =
-        (char *)calloc(MAX_STR * sizeof(char), sizeof(char));
+        (char *)calloc(MAX_STR, sizeof(char));
     char *token = NULL;
 
     if (multi_command == 0) {
@@ -363,6 +363,7 @@ int main(int argc, char **argv) {
       for (int i = 0; i < pipe_count; ++i) {
         waitpid(pids[i], NULL, 0);
       }
+      free(pids);
     }
 
   cleanup:
@@ -461,4 +462,5 @@ char *tokenize(char *str) {
 
   return token;
 }
+
 
